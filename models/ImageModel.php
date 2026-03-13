@@ -78,6 +78,7 @@ class ImageModel {
                   JOIN albumes a ON i.album_id = a.id
                   JOIN usuarios u ON a.usuario_id = u.id
                   WHERE (i.titulo LIKE :keyword)
+                  AND i.estado_moderacion = 'aprobada'
                   AND (
                       i.privacidad = 'publico' 
                       OR (

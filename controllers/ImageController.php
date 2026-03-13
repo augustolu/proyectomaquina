@@ -5,13 +5,17 @@ if(session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/ImageModel.php';
+require_once __DIR__ . '/../models/ModerationModel.php';
 
 class ImageController {
     private $imageModel;
+    private $moderationModel;
 
     public function __construct() {
         $database = new Database();
-        $this->imageModel = new ImageModel($database->getConnection());
+        $db = $database->getConnection();
+        $this->imageModel = new ImageModel($db);
+        $this->moderationModel = new ModerationModel($db);
     }
 
     private function isAuthenticated() {
@@ -31,6 +35,12 @@ class ImageController {
         }
 
         $userId = $_SESSION['user_id'];
+
+        // REGLA DE INGENIERÍA: Bloqueo preventivo por moderación
+        if (!$this->moderationModel->canUserUpload($userId)) {
+            return ["success" => false, "message" => "Subida bloqueada: Tienes 3 o más obras bajo revisión de moderación."];
+        }
+
         $uploadDir = __DIR__ . '/../uploads/gallery/';
         
         if (!file_exists($uploadDir)) {

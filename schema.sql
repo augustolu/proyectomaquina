@@ -82,6 +82,7 @@ CREATE TABLE imagenes (
     mime_type       VARCHAR(100)    NOT NULL,
     tamano_bytes    INT UNSIGNED    NOT NULL,
     privacidad      ENUM('publico', 'privado') DEFAULT 'publico',
+    estado_moderacion ENUM('aprobada', 'bajo_revision', 'bloqueada') DEFAULT 'aprobada',
     created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_album (album_id),
@@ -154,6 +155,24 @@ CREATE TABLE seguidores (
     CONSTRAINT fk_seguido  FOREIGN KEY (seguido_id)  REFERENCES usuarios(id) ON DELETE CASCADE,
     CONSTRAINT chk_no_seguirse_mismo CHECK (seguidor_id <> seguido_id)
 ) ENGINE=InnoDB COMMENT='Red de contactos unidireccional con aprobación.';
+
+-- =============================================================================
+-- 11. TABLA: denuncias
+-- Justificación: Requerimiento de Ingeniería de Software para moderación.
+-- =============================================================================
+CREATE TABLE denuncias (
+    id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    imagen_id   INT UNSIGNED    NOT NULL,
+    usuario_id  INT UNSIGNED    NOT NULL COMMENT 'Denunciante',
+    motivo      TEXT            NOT NULL,
+    resuelta    TINYINT(1)      DEFAULT 0,
+    created_at  TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    -- Regla: No más de una denuncia activa por persona por obra
+    UNIQUE KEY uq_denuncia_activa (imagen_id, usuario_id, resuelta),
+    CONSTRAINT fk_denuncia_img FOREIGN KEY (imagen_id) REFERENCES imagenes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_denuncia_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='Reportes de obras por parte de los usuarios.';
 
 SET FOREIGN_KEY_CHECKS = 1;
 
