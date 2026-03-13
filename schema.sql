@@ -16,8 +16,6 @@ USE artesanos_db;
 
 -- =============================================================================
 -- 2. TABLA: intereses
--- Justificación: Normalización para evitar redundancia y facilitar el filtrado
--- por categorías o intereses comunes.
 -- =============================================================================
 CREATE TABLE intereses (
     id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -28,19 +26,20 @@ CREATE TABLE intereses (
 
 -- =============================================================================
 -- 3. TABLA: usuarios
--- Justificación: Contiene datos personales y credenciales. Se separa la foto 
--- actual para permitir un rastreo histórico eficiente.
 -- =============================================================================
 CREATE TABLE usuarios (
-    id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-    username        VARCHAR(50)     NOT NULL,
-    email           VARCHAR(255)    NOT NULL,
-    password_hash   VARCHAR(255)    NOT NULL COMMENT 'Hash seguro (bcrypt/argon2)',
-    nombre          VARCHAR(100)    NOT NULL,
-    apellido        VARCHAR(100)    NOT NULL,
-    biografia       TEXT            NULL,
-    fecha_registro  TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
-    deleted_at      TIMESTAMP       NULL COMMENT 'Soft delete',
+    id                      INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    username                VARCHAR(50)     NOT NULL,
+    email                   VARCHAR(255)    NOT NULL,
+    password_hash           VARCHAR(255)    NOT NULL COMMENT 'Hash seguro (bcrypt/argon2)',
+    nombre                  VARCHAR(100)    NOT NULL,
+    apellido                VARCHAR(100)    NOT NULL,
+    fecha_nacimiento        DATE            NULL,
+    biografia               TEXT            NULL,
+    foto_perfil_actual_id   INT UNSIGNED    NULL COMMENT 'FK a historial_fotos_perfil',
+    es_cuenta_privada       TINYINT(1)      NOT NULL DEFAULT 0,
+    fecha_registro          TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    deleted_at              TIMESTAMP       NULL COMMENT 'Soft delete',
     PRIMARY KEY (id),
     UNIQUE KEY uq_username (username),
     UNIQUE KEY uq_email (email)
@@ -48,7 +47,6 @@ CREATE TABLE usuarios (
 
 -- =============================================================================
 -- 4. TABLA: usuario_intereses
--- Justificación: Relación N:M entre usuarios e intereses.
 -- =============================================================================
 CREATE TABLE usuario_intereses (
     usuario_id  INT UNSIGNED    NOT NULL,
@@ -60,13 +58,13 @@ CREATE TABLE usuario_intereses (
 
 -- =============================================================================
 -- 5. TABLA: albumes
--- Justificación: Organización de contenido. El título es obligatorio.
 -- =============================================================================
 CREATE TABLE albumes (
     id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
     usuario_id  INT UNSIGNED    NOT NULL,
     titulo      VARCHAR(200)    NOT NULL,
     descripcion TEXT            NULL,
+    tipo        ENUM('normal', 'perfil') NOT NULL DEFAULT 'normal',
     created_at  TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_usuario (usuario_id),
@@ -75,15 +73,16 @@ CREATE TABLE albumes (
 
 -- =============================================================================
 -- 6. TABLA: imagenes
--- Justificación: El núcleo visual. Incluye control de privacidad y relación con álbum.
 -- =============================================================================
 CREATE TABLE imagenes (
-    id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-    album_id    INT UNSIGNED    NOT NULL,
-    titulo      VARCHAR(200)    NULL COMMENT 'Título opcional',
-    url         VARCHAR(500)    NOT NULL COMMENT 'Ruta al asset',
-    privacidad  ENUM('publico', 'privado') DEFAULT 'publico',
-    created_at  TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    album_id        INT UNSIGNED    NOT NULL,
+    titulo          VARCHAR(200)    NULL COMMENT 'Título opcional',
+    url_almacen     VARCHAR(500)    NOT NULL COMMENT 'Ruta al asset',
+    mime_type       VARCHAR(100)    NOT NULL,
+    tamano_bytes    INT UNSIGNED    NOT NULL,
+    privacidad      ENUM('publico', 'privado') DEFAULT 'publico',
+    created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_album (album_id),
     CONSTRAINT fk_img_album FOREIGN KEY (album_id) REFERENCES albumes(id) ON DELETE CASCADE
@@ -91,8 +90,6 @@ CREATE TABLE imagenes (
 
 -- =============================================================================
 -- 7. TABLA: historial_fotos_perfil
--- Justificación: Rastreabilidad exigida por las reglas de negocio. Permite 
--- saber qué foto tenía el usuario en un periodo determinado.
 -- =============================================================================
 CREATE TABLE historial_fotos_perfil (
     id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -106,8 +103,15 @@ CREATE TABLE historial_fotos_perfil (
 ) ENGINE=InnoDB COMMENT='Registro histórico de imágenes de perfil.';
 
 -- =============================================================================
+-- AGREGAR FK DIFERIDA PARA FOTO DE PERFIL ACTUAL
+-- =============================================================================
+ALTER TABLE usuarios
+    ADD CONSTRAINT fk_user_foto_perfil
+    FOREIGN KEY (foto_perfil_actual_id) REFERENCES historial_fotos_perfil(id)
+    ON DELETE SET NULL;
+
+-- =============================================================================
 -- 8. TABLA: interacciones_comentarios
--- Justificación: Historial de comentarios por imagen.
 -- =============================================================================
 CREATE TABLE interacciones_comentarios (
     id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -125,7 +129,6 @@ CREATE TABLE interacciones_comentarios (
 
 -- =============================================================================
 -- 9. TABLA: interacciones_likes
--- Justificación: Registro de "me gusta". Clave única compuesta para evitar duplicados.
 -- =============================================================================
 CREATE TABLE interacciones_likes (
     imagen_id   INT UNSIGNED    NOT NULL,
@@ -138,7 +141,6 @@ CREATE TABLE interacciones_likes (
 
 -- =============================================================================
 -- 10. TABLA: seguidores
--- Justificación: Relación unidireccional con flujo de estados.
 -- =============================================================================
 CREATE TABLE seguidores (
     id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -154,3 +156,14 @@ CREATE TABLE seguidores (
 ) ENGINE=InnoDB COMMENT='Red de contactos unidireccional con aprobación.';
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- SENTENCIAS ALTER TABLE (Como referencia para bases de datos existentes)
+/*
+ALTER TABLE usuarios ADD COLUMN foto_perfil_actual_id INT UNSIGNED NULL AFTER biografia;
+ALTER TABLE usuarios ADD COLUMN es_cuenta_privada TINYINT(1) NOT NULL DEFAULT 0 AFTER foto_perfil_actual_id;
+ALTER TABLE albumes ADD COLUMN tipo ENUM('normal', 'perfil') NOT NULL DEFAULT 'normal' AFTER descripcion;
+ALTER TABLE imagenes CHANGE COLUMN url url_almacen VARCHAR(500) NOT NULL;
+ALTER TABLE imagenes ADD COLUMN mime_type VARCHAR(100) NOT NULL AFTER url_almacen;
+ALTER TABLE imagenes ADD COLUMN tamano_bytes INT UNSIGNED NOT NULL AFTER mime_type;
+ALTER TABLE usuarios ADD CONSTRAINT fk_user_foto_perfil FOREIGN KEY (foto_perfil_actual_id) REFERENCES historial_fotos_perfil(id) ON DELETE SET NULL;
+*/
