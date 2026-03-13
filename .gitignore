@@ -1,0 +1,16 @@
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_custom.db
+
+# Folder config file
+Desktop.ini
+
+# PHP specific
+vendor/
+composer.lock
+*.log
+
+# Project specific (optional: local connection files)
+# conexion.php
+# config/Database.php
