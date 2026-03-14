@@ -209,5 +209,44 @@ class UserModel {
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Obtiene los datos de un usuario por su ID (excluyendo password).
+     */
+    public function getUserById($userId) {
+        $query = "SELECT u.id, u.username, u.email, u.nombre, u.apellido, u.biografia, u.es_cuenta_privada,
+                         i.url_almacen as foto_perfil
+                  FROM " . $this->table_name . " u
+                  LEFT JOIN historial_fotos_perfil h ON u.foto_perfil_actual_id = h.id
+                  LEFT JOIN imagenes i ON h.imagen_id = i.id
+                  WHERE u.id = :id LIMIT 1";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":id", $userId);
+        $stmt->execute();
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtiene todos los intereses disponibles en el sistema.
+     */
+    public function getAllInterests() {
+        $query = "SELECT id, nombre FROM intereses ORDER BY nombre ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtiene los IDs de los intereses de un usuario específico.
+     */
+    public function getUserInterests($userId) {
+        $query = "SELECT interes_id FROM usuario_intereses WHERE usuario_id = :usuario_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":usuario_id", $userId);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
 }
 ?>

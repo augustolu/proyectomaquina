@@ -40,6 +40,40 @@ class InteractionModel {
     }
 
     /**
+     * Obtiene el total de likes de una imagen.
+     */
+    public function getLikesCount($imageId) {
+        $query = "SELECT COUNT(*) FROM interacciones_likes WHERE imagen_id = :img";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':img' => $imageId]);
+        return $stmt->fetchColumn();
+    }
+
+    /**
+     * Verifica si un usuario específico le dio like a una imagen.
+     */
+    public function userLiked($imageId, $userId) {
+        $query = "SELECT 1 FROM interacciones_likes WHERE imagen_id = :img AND usuario_id = :user";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':img' => $imageId, ':user' => $userId]);
+        return (bool)$stmt->fetch();
+    }
+
+    /**
+     * Obtiene la lista de comentarios de una imagen con los nombres de usuario.
+     */
+    public function getComments($imageId) {
+        $query = "SELECT c.*, u.username 
+                  FROM interacciones_comentarios c
+                  JOIN usuarios u ON c.usuario_id = u.id
+                  WHERE c.imagen_id = :img
+                  ORDER BY c.created_at ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':img' => $imageId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Envía una solicitud de seguimiento.
      */
     public function sendFollowRequest($followerId, $followedId) {
@@ -125,6 +159,30 @@ class InteractionModel {
             error_log("Error transaccional en acceptFollowRequest: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Obtiene el estado de seguimiento entre dos usuarios.
+     */
+    public function getFollowStatus($followerId, $followedId) {
+        $query = "SELECT estado FROM seguidores WHERE seguidor_id = :follower AND seguido_id = :followed LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':follower' => $followerId, ':followed' => $followedId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['estado'] : null;
+    }
+
+    /**
+     * Lista las solicitudes de seguimiento pendientes para un usuario.
+     */
+    public function getPendingRequests($followedId) {
+        $query = "SELECT s.*, u.username, u.nombre, u.apellido 
+                  FROM seguidores s
+                  JOIN usuarios u ON s.seguidor_id = u.id
+                  WHERE s.seguido_id = :followed AND s.estado = 'pendiente'";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':followed' => $followedId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

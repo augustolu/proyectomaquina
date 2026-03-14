@@ -1,7 +1,7 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $db_name = "red_social_fotos";
+    private $db_name = "artesanos_db";
     private $username = "root";
     private $password = "";
     public $conn;

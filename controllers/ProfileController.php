@@ -15,6 +15,17 @@ class ProfileController {
     }
 
     /**
+     * Obtiene los datos de un usuario por ID.
+     */
+    public function getUserById($userId) {
+        $user = $this->userModel->getUserById($userId);
+        if ($user) {
+            return ["success" => true, "data" => $user];
+        }
+        return ["success" => false, "message" => "Usuario no encontrado."];
+    }
+
+    /**
      * Verificación de acceso
      */
     private function isAuthenticated() {
@@ -136,17 +147,47 @@ class ProfileController {
     }
 
     /**
-     * Retorna el registro de modificaciones a la foto de perfil en el tiempo
+     * Retorna el registro de modificaciones a la foto de perfil (opcionalmente por userId)
      */
-    public function getProfilePhotoHistory() {
+    public function getProfilePhotoHistory($userId = null) {
+        $id = $userId ?? ($_SESSION['user_id'] ?? null);
+        if (!$id) return ["success" => false, "message" => "ID no proporcionado."];
+        
+        $history = $this->userModel->getProfilePhotoHistory($id);
+        
+        return ["success" => true, "data" => $history];
+    }
+
+    /**
+     * Obtiene todos los datos del perfil actual
+     */
+    public function getProfileData() {
         if (!$this->isAuthenticated()) {
-            return ["success" => false, "message" => "Se requiere autenticación."];
+            return ["success" => false, "message" => "No está autorizado."];
         }
         
         $userId = $_SESSION['user_id'];
-        $history = $this->userModel->getProfilePhotoHistory($userId);
+        $data = $this->userModel->getUserById($userId);
         
-        return ["success" => true, "data" => $history];
+        if ($data) {
+            return ["success" => true, "data" => $data];
+        }
+        return ["success" => false, "message" => "Usuario no encontrado."];
+    }
+
+    /**
+     * Obtiene la lista de todos los intereses y los marcados por un usuario
+     */
+    public function getInterestsData($userId = null) {
+        $id = $userId ?? ($_SESSION['user_id'] ?? null);
+        $all = $this->userModel->getAllInterests();
+        $userInterests = $id ? $this->userModel->getUserInterests($id) : [];
+
+        return [
+            "success" => true,
+            "all_interests" => $all,
+            "user_interests" => $userInterests
+        ];
     }
 }
 ?>

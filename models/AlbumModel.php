@@ -37,15 +37,26 @@ class AlbumModel {
     }
 
     /**
-     * Obtiene un álbum por ID.
+     * Obtiene todas las imágenes de un álbum.
      */
-    public function getById($albumId) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE id = :id LIMIT 1";
+    public function getAlbumImages($albumId) {
+        $query = "SELECT * FROM imagenes WHERE album_id = :album_id ORDER BY created_at DESC";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":id", $albumId);
+        $stmt->bindParam(":album_id", $albumId);
         $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    /**
+     * Obtiene una imagen para usar como portada del álbum.
+     */
+    public function getAlbumCover($albumId) {
+        $query = "SELECT url_almacen FROM imagenes WHERE album_id = :album_id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":album_id", $albumId);
+        $stmt->execute();
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $res ? $res['url_almacen'] : null;
     }
 }
 ?>

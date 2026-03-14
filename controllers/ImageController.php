@@ -25,10 +25,13 @@ class ImageController {
     /**
      * Sube una imagen a un álbum con validación de límites
      */
-    public function uploadToAlbum($albumId, $fileData, $privacidad = 'publico') {
+    public function uploadToAlbum($albumId, $fileData, $privacidad = 'publico', $titulo = null) {
         if (!$this->isAuthenticated()) {
             return ["success" => false, "message" => "Autenticación requerida."];
         }
+
+        // Sanitizar título (puede ser nulo)
+        $titulo = $titulo ? trim(htmlspecialchars(strip_tags($titulo))) : null;
 
         if (!isset($fileData['tmp_name']) || !is_uploaded_file($fileData['tmp_name'])) {
             return ["success" => false, "message" => "Archivo no válido."];

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de Obra - Artesanos.com</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+    <!-- Navbar Modular -->
+    <nav class="navbar">
+        <a href="feed.html" class="navbar-brand">Artesanos.com</a>
+        <div class="navbar-search">
+            <input type="text" class="search-input" placeholder="Buscar...">
+        </div>
+        <ul class="navbar-nav">
+            <li><a href="feed.html" class="nav-link">Inicio</a></li>
+            <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
+            <li><a href="logout.php" class="nav-link logout">Cerrar Sesión</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <div class="detail-container">
+            
+            <!-- Columna Izquierda: Imagen y Título -->
+            <section class="detail-main">
+                <img src="https://picsum.photos/1000/700?random=10" alt="Detalle de la obra" class="detail-img">
+                
+                <div class="detail-info">
+                    <div>
+                        <h1 class="art-title" style="font-size: 1.8rem;">Nombre de la Gran Obra</h1>
+                        <p class="art-author">Publicado el 13 de marzo, 2024</p>
+                    </div>
+                    
+                    <button class="btn-like">
+                        <span>❤️</span> 124 Likes
+                    </button>
+                </div>
+            </section>
+
+            <!-- Columna Derecha: Contacto y Comentarios -->
+            <aside class="detail-sidebar">
+                
+                <!-- Tarjeta de Contacto -->
+                <div class="contact-card">
+                    <h3>Contacto del Autor</h3>
+                    <p class="contact-item"><strong>Artesano:</strong> Juan Pérez</p>
+                    <p class="contact-item"><strong>Email:</strong> juan.perez@ejemplo.com</p>
+                    <a href="profile.html" class="nav-link" style="font-size: 0.85rem; display: block; margin-top: 0.5rem;">Ver perfil completo →</a>
+                </div>
+
+                <!-- Sección de Comentarios -->
+                <div class="comments-card">
+                    <h3>Comentarios</h3>
+                    
+                    <div class="comment-list">
+                        <!-- Bucle de Comentarios PHP -->
+                        <div class="comment-item">
+                            <p class="comment-user">Elena Artesana</p>
+                            <p class="comment-text">¡Qué técnica tan increíble! Me encanta el acabado.</p>
+                        </div>
+                        <div class="comment-item">
+                            <p class="comment-user">Carlos_88</p>
+                            <p class="comment-text">¿Haces envíos al interior?</p>
+                        </div>
+                    </div>
+
+                    <!-- Formulario para comentar -->
+                    <form class="comment-form">
+                        <textarea placeholder="Escribe un comentario..."></textarea>
+                        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">Publicar</button>
+                    </form>
+                </div>
+
+            </aside>
+
+        </div>
+    </main>
+</body>
+</html>

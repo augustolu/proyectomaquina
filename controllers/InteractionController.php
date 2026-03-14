@@ -98,5 +98,40 @@ class InteractionController {
 
         return ["success" => false, "message" => "Error al procesar la respuesta de seguimiento."];
     }
+
+    /**
+     * Obtiene todos los datos de interacción para una imagen.
+     */
+    public function getInteractionsForImage($imageId) {
+        $likes = $this->interactionModel->getLikesCount($imageId);
+        $comments = $this->interactionModel->getComments($imageId);
+        $userLiked = false;
+        
+        if ($this->isAuthenticated()) {
+            $userLiked = $this->interactionModel->userLiked($imageId, $_SESSION['user_id']);
+        }
+
+        return [
+            "likes_count" => $likes,
+            "user_liked" => $userLiked,
+            "comments" => $comments
+        ];
+    }
+
+    /**
+     * Obtiene el estado de seguimiento.
+     */
+    public function getFollowStatus($followedId) {
+        if (!$this->isAuthenticated()) return null;
+        return $this->interactionModel->getFollowStatus($_SESSION['user_id'], $followedId);
+    }
+
+    /**
+     * Obtiene las solicitudes pendientes para el usuario logueado.
+     */
+    public function getPendingRequests() {
+        if (!$this->isAuthenticated()) return [];
+        return $this->interactionModel->getPendingRequests($_SESSION['user_id']);
+    }
 }
 ?>
