@@ -44,39 +44,14 @@ if (!empty($query)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador - Artesanos.com</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css?v=<?php echo time(); ?>">
     <style>
-        :root {
-            --primary-color: #8d6e63;
-            --bg-color: #fdfcf0;
-        }
-        body { background-color: var(--bg-color); padding-top: 80px; }
-        .navbar { background: white !important; height: 70px; border-bottom: 1px solid #efebe9; }
-        .art-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; }
-        .art-card:hover { transform: translateY(-5px); }
-        .art-card-img { width: 100%; height: 250px; object-fit: cover; }
-        .art-card-body { padding: 1rem; }
-        .badge-private { background-color: #eee; color: #666; font-size: 0.7rem; border-radius: 4px; padding: 2px 6px; }
-        .user-card { background: white; border-radius: 12px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid #eee; margin-bottom: 1rem; }
-        .user-info { display: flex; align-items: center; gap: 1rem; }
-        .user-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #eee; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar fixed-top px-5">
-        <a href="feed.html" class="navbar-brand text-decoration-none" style="color: var(--primary-color); font-weight:700;">Artesanos.com</a>
-        <div class="navbar-search d-none d-md-block" style="flex: 0 1 400px;">
-            <form action="search.php" method="GET">
-                <input type="text" name="q" class="form-control rounded-pill" placeholder="Buscar obras o artesanos..." value="<?php echo htmlspecialchars($query); ?>">
-            </form>
-        </div>
-        <ul class="nav">
-            <li class="nav-item"><a href="feed.html" class="nav-link text-dark fw-bold">Inicio</a></li>
-            <li class="nav-item"><a href="profile.php" class="nav-link text-dark">Mi Perfil</a></li>
-        </ul>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
     <main class="container py-4">
         <h2 class="mb-4">Resultados para: <span class="text-muted">"<?php echo htmlspecialchars($query); ?>"</span></h2>

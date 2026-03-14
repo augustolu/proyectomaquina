@@ -63,7 +63,7 @@ class AuthController {
         if ($user) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            $target = (basename($_SERVER['PHP_SELF']) == 'AuthController.php') ? '../views/feed.html' : 'views/feed.html';
+            $target = (basename($_SERVER['PHP_SELF']) == 'AuthController.php') ? '../views/feed.php' : 'views/feed.php';
             header("Location: $target");
             exit();
         } else {

@@ -23,16 +23,50 @@ class ImageController {
     }
 
     /**
-     * Sube una imagen a un álbum con validación de límites
+     * Sube una imagen a un álbum con validación de límites (Soporta archivos y Base64)
      */
-    public function uploadToAlbum($albumId, $fileData, $privacidad = 'publico', $titulo = null) {
+    public function uploadToAlbum($albumId, $fileData, $privacidad = 'publico', $titulo = null, $base64Data = null) {
         if (!$this->isAuthenticated()) {
             return ["success" => false, "message" => "Autenticación requerida."];
         }
 
-        // Sanitizar título (puede ser nulo)
-        $titulo = $titulo ? trim(htmlspecialchars(strip_tags($titulo))) : null;
+        $userId = $_SESSION['user_id'];
+        $uploadDir = __DIR__ . '/../uploads/gallery/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
 
+        if ($base64Data) {
+            // Procesamiento de imagen Base64 (Recortada)
+            list($type, $data) = explode(';', $base64Data);
+            list(, $data) = explode(',', $data);
+            $decodedData = base64_decode($data);
+            
+            $mimeType = str_replace('data:', '', $type);
+            $extension = 'png'; // Croppie suele devolver PNG por defecto si no se especifica
+            if (strpos($mimeType, 'jpeg') !== false) $extension = 'jpg';
+            
+            $fileName = sprintf('album_%s_%s.%s', $albumId, bin2hex(random_bytes(8)), $extension);
+            $targetPath = $uploadDir . $fileName;
+            
+            if (file_put_contents($targetPath, $decodedData)) {
+                $sizeBytes = strlen($decodedData);
+                $urlAlmacen = 'uploads/gallery/' . $fileName;
+                
+                try {
+                    if ($this->imageModel->create($albumId, $urlAlmacen, $mimeType, $sizeBytes, $privacidad)) {
+                        return ["success" => true, "message" => "Imagen (recortada) añadida al álbum."];
+                    }
+                    unlink($targetPath);
+                } catch (Exception $e) {
+                    unlink($targetPath);
+                    return ["success" => false, "message" => $e->getMessage()];
+                }
+            }
+            return ["success" => false, "message" => "Error al guardar la imagen recortada."];
+        }
+
+        // Procesamiento estándar de archivo
         if (!isset($fileData['tmp_name']) || !is_uploaded_file($fileData['tmp_name'])) {
             return ["success" => false, "message" => "Archivo no válido."];
         }
@@ -88,6 +122,13 @@ class ImageController {
             return ["success" => false, "message" => "Acceso no autorizado."];
         }
 
+        $userId = $_SESSION['user_id'];
+        $details = $this->imageModel->getImageDetails($imageId);
+
+        if (!$details || $details['usuario_id'] != $userId) {
+            return ["success" => false, "message" => "No tienes permiso para borrar esta obra."];
+        }
+
         try {
             if ($this->imageModel->delete($imageId)) {
                 return ["success" => true, "message" => "Imagen eliminada."];
@@ -96,6 +137,29 @@ class ImageController {
             return ["success" => false, "message" => $e->getMessage()];
         }
         return ["success" => false, "message" => "No se pudo eliminar la imagen."];
+    }
+
+    /**
+     * Actualiza el título de una obra
+     */
+    public function updateTitle($imageId, $title) {
+        if (!$this->isAuthenticated()) {
+            return ["success" => false, "message" => "Sesión requerida."];
+        }
+
+        $userId = $_SESSION['user_id'];
+        $details = $this->imageModel->getImageDetails($imageId);
+
+        if (!$details || $details['usuario_id'] != $userId) {
+            return ["success" => false, "message" => "No tienes permiso para editar esta obra."];
+        }
+
+        $title = trim(htmlspecialchars(strip_tags($title)));
+        
+        if ($this->imageModel->updateTitle($imageId, $title)) {
+            return ["success" => true, "message" => "Título actualizado."];
+        }
+        return ["success" => false, "message" => "Error al actualizar título."];
     }
 
     /**

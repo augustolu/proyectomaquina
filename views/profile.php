@@ -63,10 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $res = $profileController->uploadProfilePhoto($_FILES['foto']);
                 break;
             case 'upload_work':
-                $res = $imageController->uploadToAlbum($_POST['album_id'], $_FILES['foto_obra'], $_POST['privacidad'], $_POST['titulo']);
+                $res = $imageController->uploadToAlbum($_POST['album_id'], $_FILES['foto_obra'] ?? null, $_POST['privacidad'], $_POST['titulo'], $_POST['foto_obra_base64'] ?? null);
                 break;
             case 'create_album':
-                $res = $albumController->createAlbum($_POST, $_FILES['foto_album']);
+                $res = $albumController->createAlbum($_POST, $_FILES['foto_album'] ?? null, $_POST['foto_album_base64'] ?? null);
                 break;
             case 'delete_image':
                 $res = $imageController->deleteImage($_POST['image_id']);
@@ -92,58 +92,18 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Perfil - Artesanos.com</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css">
     <style>
-        :root {
-            --primary-color: #8d6e63;
-            --bg-color: #fdfcf0;
-        }
-        body { background-color: var(--bg-color); padding-top: 80px; }
-        .navbar { background: white !important; height: 70px; border-bottom: 1px solid #efebe9; }
-        .section-title { border-bottom: 2px solid #efebe9; padding-bottom: 0.5rem; color: var(--primary-color); font-weight: 700; margin-bottom: 2rem; }
-        .card-profile { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 3rem; margin-bottom: 3rem; }
-        .profile-photo-large { width: 160px; height: 160px; border-radius: 50%; object-fit: cover; border: 4px solid var(--bg-color); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-primary { background-color: var(--primary-color) !important; border: none !important; padding: 0.6rem 2rem; border-radius: 8px; }
-        .btn-outline-primary { border-color: var(--primary-color) !important; color: var(--primary-color) !important; }
-        .btn-outline-primary:hover { background-color: var(--primary-color) !important; color: white !important; }
-        .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
-        .history-item { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; border: 2px solid white; transition: transform 0.2s; }
-        .history-item:hover { transform: scale(1.05); }
-        .nav-link.logout { color: #d32f2f !important; font-weight: 700; }
-        .management-section { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; }
-        
-        .album-card-dynamic { 
-            background: white; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-            transition: transform 0.3s;
-            text-decoration: none;
-            color: inherit;
-            display: block;
-        }
-        .album-card-dynamic:hover { transform: translateY(-5px); }
-        .album-preview img { width: 100%; height: 180px; object-fit: cover; }
-        .album-body { padding: 1rem; }
-        .album-title-text { font-weight: 700; color: var(--primary-color); margin-bottom: 0.2rem; display: block; }
-        .album-count { font-size: 0.8rem; color: #a1887f; }
+        /* Ajustes específicos de página que no están en main.css */
+        .management-section { background: white; border-radius: 30px; padding: 2.5rem; box-shadow: var(--shadow-premium); margin-bottom: 2rem; }
+        .collapse-btn { border-radius: 50px; padding: 0.8rem 2rem; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar fixed-top px-5">
-        <a href="feed.html" class="navbar-brand">Artesanos.com</a>
-        <div class="navbar-search d-none d-md-block" style="flex: 0 1 400px;">
-            <form action="search.php" method="GET">
-                <input type="text" name="q" class="form-control rounded-pill" placeholder="Buscar obras o artesanos...">
-            </form>
-        </div>
-        <ul class="nav">
-            <li class="nav-item"><a href="feed.html" class="nav-link text-dark fw-bold">Inicio</a></li>
-            <li class="nav-item"><a href="../controllers/AuthController.php?action=logout" class="nav-link logout">Cerrar Sesión</a></li>
-        </ul>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
     <main class="container py-4">
         <?php if ($message): ?>
@@ -153,34 +113,44 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
             </div>
         <?php endif; ?>
 
-        <!-- Cabecera de Perfil -->
-        <div class="card-profile d-flex align-items-center gap-5">
-            <div class="position-relative">
-                <?php $foto = $user['foto_perfil'] ? '../' . $user['foto_perfil'] : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' . $user['username']; ?>
-                <img src="<?php echo htmlspecialchars($foto); ?>" alt="Perfil" class="profile-photo-large">
-            </div>
-            <div class="profile-info flex-grow-1">
-                <h1 class="fw-bold mb-2">
+        <!-- Cabecera de Perfil Premium -->
+        <div class="profile-header">
+            <?php $foto = $user['foto_perfil'] ? '../' . $user['foto_perfil'] : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' . $user['username']; ?>
+            <img src="<?php echo htmlspecialchars($foto); ?>" alt="Perfil" class="profile-photo">
+            
+            <div class="profile-info">
+                <h1 class="display-5 fw-bold mb-1">
                     <?php echo htmlspecialchars($user['nombre'] . ' ' . $user['apellido']); ?>
-                    <?php if ($user['es_cuenta_privada']): ?>
-                        <span class="badge bg-secondary rounded-pill" style="font-size: 0.6rem; vertical-align: middle;">Privada</span>
-                    <?php endif; ?>
                 </h1>
-                <p class="text-muted mb-4" style="max-width: 600px; line-height: 1.6;">
-                    <?php echo htmlspecialchars($user['biografia'] ?: 'Sin biografía disponible.'); ?>
+                <p class="text-muted mb-3">@<?php echo htmlspecialchars($user['username']); ?></p>
+                
+                <p class="profile-bio">
+                    <?php echo htmlspecialchars($user['biografia'] ?: 'Inspirando a través del arte hand-made.'); ?>
                 </p>
-                <div class="d-flex gap-2">
+
+                <div class="stats-card">
+                    <div class="stat-item">
+                        <span class="stat-val"><?php echo count($albums); ?></span>
+                        <span class="stat-lab">Álbumes</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-val"><?php echo count($user_interests); ?></span>
+                        <span class="stat-lab">Intereses</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
                     <?php if ($isMyProfile): ?>
-                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editSection">Configurar Perfil</button>
+                        <button class="btn btn-primary px-4" type="button" data-bs-toggle="collapse" data-bs-target="#editSection">Configuración</button>
                     <?php else: ?>
                         <form action="profile.php?id=<?php echo $targetUserId; ?>" method="POST">
                             <input type="hidden" name="action" value="follow">
                             <?php if (!$followStatus): ?>
-                                <button type="submit" class="btn btn-primary">Seguir</button>
+                                <button type="submit" class="btn btn-primary px-5">Seguir</button>
                             <?php elseif ($followStatus === 'pendiente'): ?>
-                                <button type="button" class="btn btn-light disabled">Solicitud Pendiente</button>
+                                <button type="button" class="btn btn-light disabled rounded-pill px-4">Solicitud Pendiente</button>
                             <?php elseif ($followStatus === 'aceptada'): ?>
-                                <button type="button" class="btn btn-outline-primary disabled">Siguiendo</button>
+                                <button type="button" class="btn btn-outline-primary disabled rounded-pill px-4">Siguiendo</button>
                             <?php endif; ?>
                         </form>
                     <?php endif; ?>
@@ -301,22 +271,22 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
             <div class="row g-4">
                 <?php if (empty($albums)): ?>
                     <div class="col-12 text-center py-5">
-                        <p class="text-muted">Aún no tienes álbumes. ¡Crea el primero ahora!</p>
+                        <p class="text-muted italic">Aún no hay colecciones para mostrar.</p>
                     </div>
                 <?php else: ?>
                     <?php foreach ($albums as $album): 
                         $cover = $albumController->getAlbumCover($album['id']);
-                        $coverPath = $cover ? '../' . $cover : 'https://via.placeholder.com/300x180';
+                        $coverPath = $cover ? '../' . $cover : 'https://via.placeholder.com/600x400';
                     ?>
-                        <div class="col-md-3">
-                            <a href="album_detail.php?id=<?php echo $album['id']; ?>" class="album-card-dynamic">
-                                <div class="album-preview">
-                                    <img src="<?php echo htmlspecialchars($coverPath); ?>" alt="Miniatura">
-                                </div>
-                                <div class="album-body">
-                                    <span class="album-title-text"><?php echo htmlspecialchars($album['titulo']); ?></span>
-                                    <span class="album-count">Explora esta colección</span>
-                                </div>
+                        <div class="col-md-4 col-lg-3">
+                            <a href="album_detail.php?id=<?php echo $album['id']; ?>" class="text-decoration-none">
+                                <article class="art-card">
+                                    <img src="<?php echo htmlspecialchars($coverPath); ?>" class="art-card-img" alt="Portada">
+                                    <div class="art-card-body text-center">
+                                        <h5 class="art-title mb-1"><?php echo htmlspecialchars($album['titulo']); ?></h5>
+                                        <p class="small text-muted mb-0">Ver Colección</p>
+                                    </div>
+                                </article>
                             </a>
                         </div>
                     <?php endforeach; ?>
@@ -348,6 +318,17 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label fw-bold small">Imagen de la Obra (Arrastra para recortar)</label>
+                            <input type="file" class="form-control mb-3" id="upload_work_input" accept="image/*" required>
+                            <div id="crop_work_container" style="display:none; margin-top:15px;">
+                                <div id="work_cropper"></div>
+                                <button type="button" class="btn btn-sm btn-accent w-100 mt-2" id="apply_crop_work">Confirmar Recorte</button>
+                            </div>
+                            <!-- Input oculto para la imagen final -->
+                            <input type="hidden" name="foto_obra_base64" id="foto_obra_base64">
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label fw-bold small">Título de la Obra (Opcional)</label>
                             <input type="text" class="form-control" name="titulo" placeholder="Ej: Atardecer en la Sierra">
                         </div>
@@ -360,10 +341,6 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
                             </select>
                         </div>
 
-                        <div class="mb-0">
-                            <label class="form-label fw-bold small">Imagen de la Obra</label>
-                            <input type="file" class="form-control" name="foto_obra" required>
-                        </div>
                     </div>
                     <div class="modal-footer border-0">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
@@ -390,13 +367,19 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
                             <input type="text" class="form-control" name="titulo" placeholder="Ej: Esculturas de Barro" required>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label fw-bold small">Imagen de la Colección (Arrastra para recortar)</label>
+                            <input type="file" class="form-control mb-3" id="upload_album_input" accept="image/*" required>
+                            <div id="crop_album_container" style="display:none; margin-top:15px;">
+                                <div id="album_cropper"></div>
+                                <button type="button" class="btn btn-sm btn-accent w-100 mt-2" id="apply_crop_album">Confirmar Recorte</button>
+                            </div>
+                            <!-- Input oculto para la imagen final -->
+                            <input type="hidden" name="foto_album_base64" id="foto_album_base64">
+                        </div>
+                        
+                        <div class="mb-3">
                             <label class="form-label fw-bold small">Descripción</label>
                             <textarea class="form-control" name="descripcion" rows="2" placeholder="Cuéntanos un poco sobre este álbum..."></textarea>
-                        </div>
-                        <div class="mb-0">
-                            <label class="form-label fw-bold small">Sube la Primera Obra (Obligatorio)</label>
-                            <input type="file" class="form-control" name="foto_album" required>
-                            <div class="form-text mt-2 small">Regla del Sistema: Todo álbum debe empezar con al menos una imagen.</div>
                         </div>
                     </div>
                     <div class="modal-footer border-0">
@@ -409,5 +392,56 @@ $albums = $albumsRes['success'] ? $albumsRes['data'] : [];
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+
+    <script>
+        // Lógica de Recorte para Nueva Obra
+        let workCropper;
+        document.getElementById('upload_work_input').addEventListener('change', function() {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('crop_work_container').style.display = 'block';
+                if (workCropper) workCropper.destroy();
+                workCropper = new Croppie(document.getElementById('work_cropper'), {
+                    viewport: { width: 400, height: 300, type: 'square' },
+                    boundary: { width: 500, height: 400 },
+                    showZoomer: true
+                });
+                workCropper.bind({ url: e.target.result });
+            }
+            reader.readAsDataURL(this.files[0]);
+        });
+
+        document.getElementById('apply_crop_work').addEventListener('click', function() {
+            workCropper.result({ type: 'base64', size: 'viewport' }).then(function(base64) {
+                document.getElementById('foto_obra_base64').value = base64;
+                alert('¡Imagen de obra recortada y lista!');
+            });
+        });
+
+        // Lógica de Recorte para Nuevo Álbum
+        let albumCropper;
+        document.getElementById('upload_album_input').addEventListener('change', function() {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('crop_album_container').style.display = 'block';
+                if (albumCropper) albumCropper.destroy();
+                albumCropper = new Croppie(document.getElementById('album_cropper'), {
+                    viewport: { width: 600, height: 400, type: 'square' },
+                    boundary: { width: 700, height: 500 },
+                    showZoomer: true
+                });
+                albumCropper.bind({ url: e.target.result });
+            }
+            reader.readAsDataURL(this.files[0]);
+        });
+
+        document.getElementById('apply_crop_album').addEventListener('click', function() {
+            albumCropper.result({ type: 'base64', size: 'viewport' }).then(function(base64) {
+                document.getElementById('foto_album_base64').value = base64;
+                alert('¡Portada de álbum recortada y lista!');
+            });
+        });
+    </script>
 </body>
 </html>

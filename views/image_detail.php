@@ -21,13 +21,26 @@ if (!$imageRes['success']) {
 }
 $img = $imageRes['data'];
 
-// Procesar interacciones (Likes y Comentarios)
+$currentUserId = $_SESSION['user_id'] ?? null;
+$isOwner = ($currentUserId && $img['usuario_id'] == $currentUserId);
+
 $message = "";
 $messageType = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
+            case 'update_title':
+                $res = $imageController->updateTitle($imageId, $_POST['titulo']);
+                if ($res['success']) $img['titulo'] = $_POST['titulo'];
+                break;
+            case 'delete_image':
+                $res = $imageController->deleteImage($imageId);
+                if ($res['success']) {
+                    header("Location: profile.php");
+                    exit();
+                }
+                break;
             case 'toggle_like':
                 $res = $interactionController->toggleLike($imageId);
                 break;
@@ -51,33 +64,14 @@ $interactions = $interactionController->getInteractionsForImage($imageId);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($img['titulo'] ?: 'Obra'); ?> - Artesanos.com</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css?v=<?php echo time(); ?>">
     <style>
-        :root {
-            --primary-color: #8d6e63;
-            --bg-color: #fdfcf0;
-        }
-        body { background-color: var(--bg-color); padding-top: 80px; }
-        .navbar { background: white !important; height: 70px; border-bottom: 1px solid #efebe9; }
-        .detail-main { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .img-display { width: 100%; max-height: 600px; object-fit: contain; background: #fafafa; border-radius: 8px; }
-        .btn-like-active { background-color: #d84315 !important; color: white !important; border: none !important; }
-        .comment-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
-        .comment-user { font-weight: 700; color: var(--primary-color); font-size: 0.9rem; }
-        .comment-text { margin-top: 0.3rem; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar fixed-top px-5">
-        <a href="feed.html" class="navbar-brand text-decoration-none" style="color: var(--primary-color); font-weight:700;">Artesanos.com</a>
-        <ul class="nav">
-            <li class="nav-item"><a href="feed.html" class="nav-link text-dark fw-bold">Inicio</a></li>
-            <li class="nav-item"><a href="search.php" class="nav-link text-dark">Buscador</a></li>
-            <li class="nav-item"><a href="profile.php" class="nav-link text-dark">Mi Perfil</a></li>
-        </ul>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
     <main class="container py-4">
         <?php if ($message): ?>
@@ -90,51 +84,80 @@ $interactions = $interactionController->getInteractionsForImage($imageId);
         <div class="row g-4">
             <!-- Imagen Central -->
             <div class="col-lg-8">
-                <div class="detail-main text-center">
-                    <img src="../<?php echo htmlspecialchars($img['url_almacen']); ?>" class="img-display mb-3" alt="Obra">
+                <div class="detail-main">
+                    <div class="text-center mb-4">
+                        <img src="../<?php echo htmlspecialchars($img['url_almacen']); ?>" class="img-display img-fluid" alt="Obra">
+                    </div>
                     
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div class="text-start">
-                            <h2 class="fw-bold mb-1"><?php echo htmlspecialchars($img['titulo'] ?: 'Sin título'); ?></h2>
-                            <p class="text-muted">Por <?php echo htmlspecialchars($img['nombre'] . ' ' . $img['apellido']); ?> en álbum <strong><?php echo htmlspecialchars($img['album_titulo']); ?></strong></p>
-                        </div>
-                        
+                    <div class="artist-badge">
+                        <span>🎨</span>
+                        <span>
+                            Por <strong><?php echo htmlspecialchars($img['nombre'] . ' ' . $img['apellido']); ?></strong> 
+                            en <strong><?php echo htmlspecialchars($img['album_titulo']); ?></strong>
+                        </span>
+                    </div>
+
+                    <div class="mb-4">
+                        <?php if ($isOwner): ?>
+                            <form action="image_detail.php?id=<?php echo $imageId; ?>" method="POST" class="d-flex align-items-center gap-2">
+                                <input type="hidden" name="action" value="update_title">
+                                <input type="text" name="titulo" class="form-control form-control-lg fw-bold border-0 bg-light" value="<?php echo htmlspecialchars($img['titulo'] ?: ''); ?>" placeholder="Añadir título...">
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </form>
+                        <?php else: ?>
+                            <h1 class="display-5 fw-bold mb-0"><?php echo htmlspecialchars($img['titulo'] ?: 'Sin título'); ?></h1>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="action-row">
                         <form action="image_detail.php?id=<?php echo $imageId; ?>" method="POST">
                             <input type="hidden" name="action" value="toggle_like">
                             <button type="submit" class="btn btn-outline-danger px-4 rounded-pill <?php echo $interactions['user_liked'] ? 'btn-like-active' : ''; ?>">
                                 ❤️ <?php echo $interactions['likes_count']; ?> Likes
                             </button>
                         </form>
+
+                        <?php if ($isOwner): ?>
+                            <form action="image_detail.php?id=<?php echo $imageId; ?>" method="POST" onsubmit="return confirm('¿Estás seguro de borrar esta obra?');">
+                                <input type="hidden" name="action" value="delete_image">
+                                <button type="submit" class="btn-delete"><span>🗑️</span> Eliminar Obra</button>
+                            </form>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <!-- Interacciones (Comentarios) -->
             <div class="col-lg-4">
-                <div class="detail-main">
+                <div class="detail-main h-100 d-flex flex-column">
                     <h5 class="fw-bold mb-4">Comentarios</h5>
                     
-                    <div class="comment-list mb-4" style="max-height: 400px; overflow-y: auto;">
+                    <div class="comment-list flex-grow-1 mb-4" style="max-height: 500px; overflow-y: auto;">
                         <?php if (empty($interactions['comments'])): ?>
-                            <p class="text-muted small">No hay comentarios aún. ¡Sé el primero!</p>
+                            <div class="text-center py-5">
+                                <span class="display-1 text-muted opacity-25">💬</span>
+                                <p class="text-muted mt-3">No hay comentarios aún.<br>¡Sé el primero en comentar!</p>
+                            </div>
                         <?php else: ?>
                             <?php foreach ($interactions['comments'] as $c): ?>
-                                <div class="comment-item">
+                                <div class="comment-bubble">
                                     <span class="comment-user">@<?php echo htmlspecialchars($c['username']); ?></span>
-                                    <p class="comment-text mb-0"><?php echo htmlspecialchars($c['contenido']); ?></p>
-                                    <small class="text-muted"><?php echo $c['created_at']; ?></small>
+                                    <p class="comment-text mb-1"><?php echo htmlspecialchars($c['contenido']); ?></p>
+                                    <small class="text-muted" style="font-size: 0.75rem;"><?php echo date('d M, Y', strtotime($c['created_at'])); ?></small>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
 
-                    <form action="image_detail.php?id=<?php echo $imageId; ?>" method="POST">
-                        <input type="hidden" name="action" value="post_comment">
-                        <div class="mb-2">
-                            <textarea class="form-control" name="contenido" rows="3" placeholder="Escribe un comentario..." required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Publicar</button>
-                    </form>
+                    <div class="mt-auto">
+                        <form action="image_detail.php?id=<?php echo $imageId; ?>" method="POST">
+                            <input type="hidden" name="action" value="post_comment">
+                            <div class="mb-3">
+                                <textarea class="form-control border-0 bg-light" name="contenido" rows="3" placeholder="Escribe un comentario..." required style="border-radius: 15px; resize: none;"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Publicar Comentario</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

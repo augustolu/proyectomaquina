@@ -25,7 +25,7 @@ class AlbumController {
     /**
      * Crea un nuevo álbum obligando a subir la primera imagen
      */
-    public function createAlbum($data, $fileData) {
+    public function createAlbum($data, $fileData, $base64Data = null) {
         if (!$this->isAuthenticated()) {
             return ["success" => false, "message" => "Sesión no iniciada."];
         }
@@ -38,15 +38,16 @@ class AlbumController {
             return ["success" => false, "message" => "Cuidado: El álbum NECESITA un título."];
         }
 
-        // REGLA: Sin foto no hay álbum
-        if (!isset($fileData['tmp_name']) || empty($fileData['tmp_name'])) {
+        // REGLA: Sin foto no hay álbum (Debe venir archivo O base64)
+        $hasFile = isset($fileData['tmp_name']) && !empty($fileData['tmp_name']);
+        if (!$hasFile && !$base64Data) {
             return ["success" => false, "message" => "Por regla del sistema, debes subir al menos una foto para crear el álbum."];
         }
 
         $albumId = $this->albumModel->create($userId, $titulo, $descripcion);
         if ($albumId) {
             // Intentar subir la primera imagen
-            $imgRes = $this->imageController->uploadToAlbum($albumId, $fileData);
+            $imgRes = $this->imageController->uploadToAlbum($albumId, $fileData, 'publico', null, $base64Data);
             
             if ($imgRes['success']) {
                 return ["success" => true, "message" => "¡Álbum '$titulo' creado con su primera obra!"];
@@ -83,6 +84,51 @@ class AlbumController {
      */
     public function getAlbumCover($albumId) {
         return $this->albumModel->getAlbumCover($albumId);
+    }
+
+    /**
+     * Elimina un álbum y todas sus imágenes asociadas.
+     */
+    public function deleteAlbum($albumId) {
+        if (!$this->isAuthenticated()) {
+            return ["success" => false, "message" => "Sesión no iniciada."];
+        }
+
+        $userId = $_SESSION['user_id'];
+        $album = $this->albumModel->getById($albumId);
+
+        if (!$album || $album['usuario_id'] != $userId) {
+            return ["success" => false, "message" => "No tienes permiso para borrar este álbum."];
+        }
+
+        // 1. Obtener todas las imágenes para borrar los archivos físicos
+        $images = $this->albumModel->getAlbumImages($albumId);
+        foreach ($images as $img) {
+            $filePath = __DIR__ . '/../' . $img['url_almacen'];
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        // 2. Borrar de la base de datos (Imágenes primero si no hay CASCADE)
+        if ($this->albumModel->delete($albumId)) {
+            return ["success" => true, "message" => "Álbum eliminado correctamente."];
+        }
+        
+        return ["success" => false, "message" => "Error al eliminar el álbum."];
+    }
+    /**
+     * Lista todos los álbumes de usuarios públicos para el feed global.
+     */
+    public function listPublicAlbums() {
+        $albums = $this->albumModel->getAllPublicAlbums();
+        
+        // Enriquecer con la portada
+        foreach ($albums as &$alb) {
+            $alb['portada'] = $this->albumModel->getAlbumCover($alb['id']);
+        }
+        
+        return ["success" => true, "data" => $albums];
     }
 }
 ?>

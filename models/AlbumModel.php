@@ -40,7 +40,7 @@ class AlbumModel {
      * Obtiene todas las imágenes de un álbum.
      */
     public function getAlbumImages($albumId) {
-        $query = "SELECT * FROM imagenes WHERE album_id = :album_id ORDER BY created_at DESC";
+        $query = "SELECT * FROM imagenes WHERE album_id = :album_id ORDER BY created_at ASC";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":album_id", $albumId);
         $stmt->execute();
@@ -51,12 +51,45 @@ class AlbumModel {
      * Obtiene una imagen para usar como portada del álbum.
      */
     public function getAlbumCover($albumId) {
-        $query = "SELECT url_almacen FROM imagenes WHERE album_id = :album_id LIMIT 1";
+        $query = "SELECT url_almacen FROM imagenes WHERE album_id = :album_id ORDER BY created_at ASC LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":album_id", $albumId);
         $stmt->execute();
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
         return $res ? $res['url_almacen'] : null;
+    }
+
+    /**
+     * Obtiene un álbum por ID para detalles.
+     */
+    public function getById($id) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE id = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Elimina un álbum por completo.
+     */
+    public function delete($id) {
+        $query = "DELETE FROM " . $this->table_name . " WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * Obtiene todos los álbumes de usuarios con cuenta pública.
+     */
+    public function getAllPublicAlbums() {
+        $query = "SELECT a.*, u.nombre, u.apellido, u.username 
+                  FROM " . $this->table_name . " a 
+                  JOIN usuarios u ON a.usuario_id = u.id 
+                  WHERE u.es_cuenta_privada = 0 AND a.tipo = 'normal' 
+                  ORDER BY a.created_at DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

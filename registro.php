@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <div class="auth-footer">
-        ¿Ya tienes cuenta? <a href="views/login.html">Inicia sesión</a>
+        ¿Ya tienes cuenta? <a href="views/login.php">Inicia sesión</a>
     </div>
 </div>
 

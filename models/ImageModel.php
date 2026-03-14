@@ -108,7 +108,7 @@ class ImageModel {
      * Retorna detalles de imagen con datos de contacto del artesano.
      */
     public function getImageDetails($imageId) {
-        $query = "SELECT i.*, u.nombre, u.apellido, u.email, a.titulo as album_titulo
+        $query = "SELECT i.*, u.id as usuario_id, u.nombre, u.apellido, u.email, a.titulo as album_titulo
                   FROM imagenes i
                   JOIN albumes a ON i.album_id = a.id
                   JOIN usuarios u ON a.usuario_id = u.id
@@ -118,6 +118,14 @@ class ImageModel {
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    /**
+     * Actualiza el título de una obra.
+     */
+    public function updateTitle($imageId, $title) {
+        $query = "UPDATE " . $this->table_name . " SET titulo = :title WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([':title' => $title, ':id' => $imageId]);
     }
 }
 ?>

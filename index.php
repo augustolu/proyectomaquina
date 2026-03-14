@@ -1,5 +1,5 @@
 <?php
 // Redirigir automáticamente a la vista de login
-header("Location: views/login.html");
+header("Location: views/login.php");
 exit();
 ?>

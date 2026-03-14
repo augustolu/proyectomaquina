@@ -248,5 +248,25 @@ class UserModel {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+
+    /**
+     * Busca usuarios artesanos por keyword.
+     */
+    public function searchUsers($keyword, $excludeUserId = 0) {
+        $query = "SELECT u.id, u.username, u.nombre, u.apellido, u.es_cuenta_privada,
+                         i.url_almacen as foto_perfil
+                  FROM " . $this->table_name . " u
+                  LEFT JOIN historial_fotos_perfil h ON u.foto_perfil_actual_id = h.id
+                  LEFT JOIN imagenes i ON h.imagen_id = i.id
+                  WHERE (u.username LIKE :keyword OR u.nombre LIKE :keyword OR u.apellido LIKE :keyword)
+                  AND u.id != :exclude
+                  LIMIT 10";
+        $stmt = $this->conn->prepare($query);
+        $keywordParam = "%$keyword%";
+        $stmt->bindParam(":keyword", $keywordParam);
+        $stmt->bindParam(":exclude", $excludeUserId);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>

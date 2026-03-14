@@ -29,6 +29,20 @@ if (!$album) {
     die("Álbum no encontrado.");
 }
 $images = $albumModel->getAlbumImages($albumId);
+
+$isOwner = (isset($_SESSION['user_id']) && $album['usuario_id'] == $_SESSION['user_id']);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'delete_album') {
+        $deleteRes = $albumController->deleteAlbum($albumId);
+        if ($deleteRes['success']) {
+            header("Location: profile.php");
+            exit();
+        } else {
+            $error = $deleteRes['message'];
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -36,58 +50,79 @@ $images = $albumModel->getAlbumImages($albumId);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($album['titulo']); ?> - Artesanos.com</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/main.css?v=<?php echo time(); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #8d6e63;
-            --bg-color: #fdfcf0;
-        }
-        body { background-color: var(--bg-color); padding-top: 80px; }
-        .navbar { background: white !important; height: 70px; border-bottom: 1px solid #efebe9; }
-        .art-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; }
-        .art-card:hover { transform: translateY(-5px); }
-        .art-card-img { width: 100%; height: 200px; object-fit: cover; }
-        .art-card-body { padding: 1rem; }
-    </style>
 </head>
 <body>
 
-    <nav class="navbar fixed-top px-5">
-        <a href="feed.html" class="navbar-brand text-decoration-none" style="color: var(--primary-color); font-weight:700;">Artesanos.com</a>
-        <ul class="nav">
-            <li class="nav-item"><a href="feed.html" class="nav-link text-dark fw-bold">Inicio</a></li>
-            <li class="nav-item"><a href="profile.php" class="nav-link text-dark">Mi Perfil</a></li>
-        </ul>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
-    <main class="container py-4">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="profile.php">Mi Perfil</a></li>
-                <li class="breadcrumb-item active"><?php echo htmlspecialchars($album['titulo']); ?></li>
-            </ol>
-        </nav>
-
-        <h1 class="fw-bold mb-2"><?php echo htmlspecialchars($album['titulo']); ?></h1>
-        <p class="text-muted mb-4"><?php echo htmlspecialchars($album['descripcion'] ?: 'Sin descripción.'); ?></p>
+    <main class="container py-5">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <nav aria-label="breadcrumb" class="mb-2">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="profile.php" class="text-muted text-decoration-none">Perfil</a></li>
+                        <li class="breadcrumb-item active text-accent" aria-current="page"><?php echo htmlspecialchars($album['titulo']); ?></li>
+                    </ol>
+                </nav>
+                <h1 class="display-4 fw-bold mb-0"><?php echo htmlspecialchars($album['titulo']); ?></h1>
+                <p class="text-muted lead mt-2"><?php echo htmlspecialchars($album['descripcion'] ?: 'Explora esta colección exclusiva.'); ?></p>
+            </div>
+            <?php if ($isOwner): ?>
+                <form action="album_detail.php?id=<?php echo $albumId; ?>" method="POST" onsubmit="return confirm('¿Borrar este álbum?');">
+                    <input type="hidden" name="action" value="delete_album">
+                    <button type="submit" class="btn btn-outline-danger px-4 rounded-pill">Borrar Colección</button>
+                </form>
+            <?php endif; ?>
+        </div>
 
         <div class="row g-4">
             <?php if (empty($images)): ?>
                 <p class="text-center py-5 text-muted">Aún no hay obras en este álbum.</p>
-            <?php else: ?>
-                <?php foreach ($images as $img): ?>
-                    <div class="col-6 col-md-3">
-                        <a href="image_detail.php?id=<?php echo $img['id']; ?>" class="text-decoration-none">
-                            <article class="art-card">
-                                <img src="../<?php echo htmlspecialchars($img['url_almacen']); ?>" class="art-card-img" alt="Obra">
-                                <div class="art-card-body text-center">
-                                    <h6 class="fw-bold mb-0 text-dark"><?php echo htmlspecialchars($img['titulo'] ?: 'Sin título'); ?></h6>
+            <?php else: 
+                // La primera imagen es la PORTADA
+                $cover = array_shift($images); 
+            ?>
+                <!-- Portada destacados (Hero Section) -->
+                <div class="col-12 mb-5">
+                    <div class="detail-main p-0 overflow-hidden">
+                        <div class="row g-0">
+                            <div class="col-md-7">
+                                <img src="../<?php echo htmlspecialchars($cover['url_almacen']); ?>" class="img-display w-100" style="height: 500px; object-fit: cover; border-radius: 0;" alt="Portada">
+                            </div>
+                            <div class="col-md-5 d-flex align-items-center p-5">
+                                <div>
+                                    <span class="text-uppercase tracking-widest small fw-bold text-accent d-block mb-3">Obra Representativa</span>
+                                    <h2 class="display-6 fw-bold mb-4"><?php echo htmlspecialchars($cover['titulo'] ?: $album['titulo']); ?></h2>
                                 </div>
-                            </article>
-                        </a>
+                            </div>
+                        </div>
                     </div>
-                <?php endforeach; ?>
+                </div>
+
+                <div class="col-12">
+                    <h5 class="fw-bold mb-3">Obras en este álbum</h5>
+                </div>
+
+                <?php if (empty($images)): ?>
+                    <div class="col-12">
+                        <p class="text-muted small">No hay más obras adicionales.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($images as $img): ?>
+                        <div class="col-6 col-md-3">
+                            <a href="image_detail.php?id=<?php echo $img['id']; ?>" class="text-decoration-none">
+                                <article class="art-card">
+                                    <img src="../<?php echo htmlspecialchars($img['url_almacen']); ?>" class="art-card-img" alt="Obra">
+                                    <div class="art-card-body text-center">
+                                        <h6 class="fw-bold mb-0 text-dark"><?php echo htmlspecialchars($img['titulo'] ?: 'Sin título'); ?></h6>
+                                    </div>
+                                </article>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </main>
